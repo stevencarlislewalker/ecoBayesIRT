@@ -139,3 +139,20 @@ BOeta <- function(BO) {
         A + XB
     })
 }
+
+##' Pairwise comparisons among columns in binary or probability
+##' matrices
+##'
+##' @param y binary or probability matrix
+##' @return 4-d array with comparisons
+##' @export
+pairComp <- function(y){
+    out <- array(dim = c(2, 2, ncol(y), ncol(y)))
+    out[1,1,,] <- t(y) %*% y
+    out[1,2,,] <- t(y) %*% (1-y)
+    out[2,1,,] <- t(1-y) %*% y
+    out[2,2,,] <- t(1-y) %*% (1-y)
+    dimnames(out)[1:2] <- rep(list(c("present","absent")), 2)
+    dimnames(out)[3:4] <- rep(list(colnames(y)), 2)
+    return(out)
+}
