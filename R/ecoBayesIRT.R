@@ -146,7 +146,7 @@ BOflip <- function(BO, refSites) {
 ##' ordination
 ##'
 ##' @param BO Results of \code{\link{getBO}}
-##' @return And array containing the posterior of the linear predictor
+##' @return An array containing the posterior of the linear predictor
 ##' with dimensions relating to (1) MCMC iterations, (2) sites, and
 ##' (3) species
 ##' @export
@@ -160,6 +160,29 @@ BOeta <- function(BO) {
         XB <- aperm(simplify2array(lapply(seq_len(nSamp), outerSamp)), c(3,1,2))
         A + XB
     })
+}
+
+##' Compute the posterior of the fitted values from a Bayesian
+##' ordination on the probability scale
+##'
+##' @param BO Results of \code{\link{getBO}} (not required if
+##' \code{eta} is present)
+##' @param eta Results of \code{\link{BOeta}} (not required if
+##' \code{BO} is present)
+##' @param .seed Seed for random number generator associated with the
+##' standard normal residual error term
+##' @return An array containing the posterior of the fitted values on
+##' the probability scale with dimensions relating to (1) MCMC
+##' iterations, (2) sites, and (3) species
+##' @export
+BOp <- function(BO, eta, .seed = 1) {
+    if(missing(eta) & (!missing(BO))) {
+        eta <- BOeta(BO)
+    } else if(missing(eta)) {
+        stop("must specify at least one of either BO or eta")
+    }
+    set.seed(.seed)
+    pnorm(eta + array(rnorm(prod(dim(eta))), dim(eta)))
 }
 
 ##' Pairwise comparisons among columns in binary or probability

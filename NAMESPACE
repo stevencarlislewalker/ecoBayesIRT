@@ -3,6 +3,7 @@
 export(BOeta)
 export(BOflip)
 export(BOindex)
+export(BOp)
 export(BOrotate)
 export(BOswitch)
 export(getBO)

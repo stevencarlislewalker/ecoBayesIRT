@@ -10,7 +10,7 @@ BOeta(BO)
 \item{BO}{Results of \code{\link{getBO}}}
 }
 \value{
-And array containing the posterior of the linear predictor
+An array containing the posterior of the linear predictor
 with dimensions relating to (1) MCMC iterations, (2) sites, and
 (3) species
 }
