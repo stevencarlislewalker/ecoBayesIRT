@@ -1,5 +1,5 @@
-## ecoBayesIRT:
-## Helper functions for ecological Bayesian item response theory in R
+## ecoBayesIRT: Helper functions for ecological Bayesian item response
+## theory in R using MCMCpack
 ## 
 ## Copyright (C) 2014  Steven Carlisle Walker
 ##
@@ -18,6 +18,53 @@
 ## 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
+##' Helper functions for ecological Bayesian item response theory in R
+##' using MCMCpack
+##'
+##' Steps: (1) Fit a model using \code{\link{MCMCpack}} functions such
+##' as \code{\link{MCMCirt1d}} or \code{\link{MCMCirtKd}}.  (2) Do
+##' diagnostics and convergence checks on the resulting MCMC objects.
+##' (3) Separate the three types of parameters (site scores, \code{x},
+##' species intercepts, \code{a}, and species scores, \code{b}), by
+##' passing the MCMC through the \code{\link{getBO}} function.  (4)
+##' Use the other functions of this package to analyze the results
+##' (\code{\link{BOeta}}; \code{\link{BOflip}}; \code{\link{BOp}};
+##' \code{\link{BOrotate}}; \code{\link{BOswitch}}).
+##'
+##' @docType package
+##' @name ecoBayesIRT
+##'
+##' @examples
+##' ## simulate data
+##' nSite <- 25
+##' nSpec <- 10
+##' nIter <- 10000
+##' set.seed(1)
+##' eta <- cbind(1, rnorm(nSite)) %*% rbind(rnorm(nSpec), rnorm(nSpec))
+##' e <- matrix(rnorm(nSite*nSpec), nSite, nSpec)
+##' p <- pnorm(eta + e)
+##' Y <- matrix(rbinom(nSite*nSpec, 1, p), nSite, nSpec)
+##' rownames(Y) <- letters[1:nSite]
+##' colnames(Y) <- LETTERS[1:nSpec]
+##'
+##' ## fit model
+##' Yirt <- MCMCirt1d(Y, mcmc = nIter, store.item = TRUE)
+##'
+##' ## getBO
+##' BO <- getBO(Yirt, Y)
+##'
+##' ## fix identifiability
+##' densitiesX <- apply(BO$x, 2:3, logspline)
+##' denAtZero <- matrix(sapply(densitiesX, dlogspline, q = 0),
+##'                     dim(BO$x)[2:3])
+##' (refSites <- apply(denAtZero, 2, which.min))
+##' BO <- BOflip(BO, refSites)
+##'
+##' ## get fitted values
+##' pFit <- BOp(BO)
+##' pFitMean <- apply(pFit, c(2, 3), mean)
+##' boxplot(pFitMean ~ Y)
+NULL
 
 
 ##' Construct an index for a Bayesian ordination (BO) mcmc object
@@ -93,10 +140,12 @@ getBO <- function(mcmc, Y, index, name = c("x", "a", "b")) {
 ##' @return A Bayesian ordination with rotated axes
 ##' @export
 BOrotate <- function(BO) {
+    checkBO(BO)
     within(BO, {
         xCenter <- sweep(x, c(1, 3), apply(x, c(1, 3), mean))
         svdXCenter <- apply(xCenter, 1, svd)
         d <- dim(b)[3]
+        n <- dim(x)[2]
         recip <- rep(1/n, n)
         for(i in 1:dim(a)[1]) {
             a[i,] <- a[i,] + b[i,,] %*% t(x[i,,]) %*% recip
@@ -109,12 +158,14 @@ BOrotate <- function(BO) {
 ##' Switch axes labels
 ##'
 ##' Attempts to switch axis labels such that more highly correlated
-##' MCMC samples are labeled as the same axis.
+##' MCMC samples are labeled as the same axis.  Only for two-axis
+##' models.
 ##'
 ##' @param BO Results of \code{\link{getBO}}
 ##' @return A Bayesian ordination with switched axes
 ##' @export
 BOswitch <- function(BO) {
+    checkBO(BO)
     within(BO, {
         for(i in 1:nrow(a)) {
             within <- c(x[-i,,1] %*% x[i,,1], x[-i,,2] %*% x[i,,2])
@@ -135,6 +186,7 @@ BOswitch <- function(BO) {
 ##' @return A Bayesian ordination with flipped axes
 ##' @export
 BOflip <- function(BO, refSites) {
+    checkBO(BO)
     .fn <- function(ii) ifelse(BO$x[, refSites[ii], ii] < 0, -1, 1)
     idntMult <- sapply(1:length(refSites), .fn)
     BO$x <- sweep(BO$x, c(1, 3), idntMult, "*")
@@ -151,6 +203,7 @@ BOflip <- function(BO, refSites) {
 ##' (3) species
 ##' @export
 BOeta <- function(BO) {
+    checkBO(BO)
     with(BO, {
         nSite <- dim(BO$x)[2]
         nSpec <- dim(BO$b)[2]
@@ -184,6 +237,22 @@ BOp <- function(BO, eta, .seed = 1) {
     set.seed(.seed)
     pnorm(eta + array(rnorm(prod(dim(eta))), dim(eta)))
 }
+
+
+checkBO <- function(BO) {
+    nms <- names(BO)
+    if(length(setdiff(nms, c("x", "a", "b"))) > 0) {
+        stop("need x, a, and b elements to be a valid BO")
+    }
+    nIter <- dim(BO$x)[1]
+    nSite <- dim(BO$x)[2]
+    nSpec <- dim(BO$b)[2]
+    nAxes <- dim(BO$x)[3]
+    if(nIter != dim(BO$b)[1]) stop("inconsistent number of iterations")
+    if(nSpec != dim(BO$a)[2]) stop("inconsistent number of species")
+    if(nAxes != dim(BO$b)[3]) stop("inconsistent number of axes")
+}
+
 
 ##' Pairwise comparisons among columns in binary or probability
 ##' matrices

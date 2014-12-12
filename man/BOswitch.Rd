@@ -13,6 +13,7 @@ A Bayesian ordination with switched axes
 }
 \description{
 Attempts to switch axis labels such that more highly correlated
-MCMC samples are labeled as the same axis.
+MCMC samples are labeled as the same axis.  Only for two-axis
+models.
 }
 

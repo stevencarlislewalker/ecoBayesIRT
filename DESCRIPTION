@@ -1,10 +1,13 @@
 Package: ecoBayesIRT
 Version: 0.0
 Date: 2014-10-15
-Title: Helper functions for ecological Bayesian item response theory in R
+Title: Helper functions for ecological Bayesian item response theory in R using
+    MCMCpack
 Author: Steve Walker
 Maintainer: Steve Walker <scwalker@math.mcmaster.ca>
 Depends:
-    MCMCpack
+    MCMCpack,
+    abind,
+    logspline
 Description: Helper functions for ecological Bayesian item response theory in R.
 License: GPL (>= 2)
