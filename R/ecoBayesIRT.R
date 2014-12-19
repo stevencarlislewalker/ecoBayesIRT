@@ -21,13 +21,14 @@
 ##' Helper functions for ecological Bayesian item response theory in R
 ##' using MCMCpack
 ##'
-##' Steps: (1) Fit a model using \code{\link{MCMCpack}} functions such
-##' as \code{\link{MCMCirt1d}} or \code{\link{MCMCirtKd}}.  (2) Do
-##' diagnostics and convergence checks on the resulting MCMC objects.
-##' (3) Separate the three types of parameters (site scores, \code{x},
-##' species intercepts, \code{a}, and species scores, \code{b}), by
-##' passing the MCMC through the \code{\link{getBO}} function.  (4)
-##' Use the other functions of this package to analyze the results
+##' Steps: (1) Fit a model using functions from the \code{MCMCpack}
+##' package such as \code{\link{MCMCirt1d}} or
+##' \code{\link{MCMCirtKd}}.  (2) Do diagnostics and convergence
+##' checks on the resulting MCMC objects.  (3) Separate the three
+##' types of parameters (site scores, \code{x}, species intercepts,
+##' \code{a}, and species scores, \code{b}), by passing the MCMC
+##' through the \code{\link{getBO}} function.  (4) Use the other
+##' functions of this package to analyze the results
 ##' (\code{\link{BOeta}}; \code{\link{BOflip}}; \code{\link{BOp}};
 ##' \code{\link{BOrotate}}; \code{\link{BOswitch}}).
 ##'
@@ -40,7 +41,10 @@
 ##' nSpec <- 10
 ##' nIter <- 10000
 ##' set.seed(1)
-##' eta <- cbind(1, rnorm(nSite)) %*% rbind(rnorm(nSpec), rnorm(nSpec))
+##' x <- rnorm(nSite)
+##' a <- rnorm(nSpec)
+##' b <- rnorm(nSpec)
+##' eta <- cbind(1, x) %*% rbind(a, b)
 ##' e <- matrix(rnorm(nSite*nSpec), nSite, nSpec)
 ##' p <- pnorm(eta + e)
 ##' Y <- matrix(rbinom(nSite*nSpec, 1, p), nSite, nSpec)
@@ -54,16 +58,16 @@
 ##' BO <- getBO(Yirt, Y)
 ##'
 ##' ## fix identifiability
-##' densitiesX <- apply(BO$x, 2:3, logspline)
-##' denAtZero <- matrix(sapply(densitiesX, dlogspline, q = 0),
-##'                     dim(BO$x)[2:3])
-##' (refSites <- apply(denAtZero, 2, which.min))
-##' BO <- BOflip(BO, refSites)
+##' (refSite <- findRefSite(BO))
+##' BO <- BOflip(BO, refSite)
 ##'
 ##' ## get fitted values
 ##' pFit <- BOp(BO)
 ##' pFitMean <- apply(pFit, c(2, 3), mean)
 ##' boxplot(pFitMean ~ Y)
+##'
+##' ## ordination plot
+##' ordInt <- t(apply(BO$x, c(2, 3), quantile, probs = c(0.025, 0.975))[,,1])
 NULL
 
 
@@ -253,6 +257,16 @@ checkBO <- function(BO) {
     if(nAxes != dim(BO$b)[3]) stop("inconsistent number of axes")
 }
 
+##' Find reference site
+##'
+##' @param BO Results of \code{\link{getBO}}
+##' @export
+findRefSite <- function(BO) {
+    densitiesX <- apply(BO$x, 2:3, logspline)
+    denAtZero <- matrix(sapply(densitiesX, dlogspline, q = 0),
+                        dim(BO$x)[2:3])
+    apply(denAtZero, 2, which.min)
+}
 
 ##' Pairwise comparisons among columns in binary or probability
 ##' matrices
@@ -269,4 +283,24 @@ pairComp <- function(y){
     dimnames(out)[1:2] <- rep(list(c("present","absent")), 2)
     dimnames(out)[3:4] <- rep(list(colnames(y)), 2)
     return(out)
+}
+
+
+##' Compare binary data to binned probabilistic expectations
+##'
+##' @param y vector of binary data
+##' @param p vector of probabilities
+##' @param length number of bins
+##' @return \code{data.frame} with observed proportions and expected
+##' proportions in evenly spaced bins.
+##' @export
+fitProbBins <- function(y, p, length = 11) {
+    obsExp <- data.frame(y, p)
+    incr <- 1/(length-1)
+    mid1 <- incr/2
+    mid2 <- 1 - mid1
+    obsProp <- tapply(obsExp$y, cut(obsExp$p, seq(0, 1, length = length)), mean)
+    expProp <- seq(mid1, mid2, by = incr)
+    data.frame(obsProp = obsProp,
+               expProp = expProp)
 }

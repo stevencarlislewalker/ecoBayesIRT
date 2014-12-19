@@ -6,13 +6,14 @@
 \title{Helper functions for ecological Bayesian item response theory in R
 using MCMCpack}
 \description{
-Steps: (1) Fit a model using \code{\link{MCMCpack}} functions such
-as \code{\link{MCMCirt1d}} or \code{\link{MCMCirtKd}}.  (2) Do
-diagnostics and convergence checks on the resulting MCMC objects.
-(3) Separate the three types of parameters (site scores, \code{x},
-species intercepts, \code{a}, and species scores, \code{b}), by
-passing the MCMC through the \code{\link{getBO}} function.  (4)
-Use the other functions of this package to analyze the results
+Steps: (1) Fit a model using functions from the \code{MCMCpack}
+package such as \code{\link{MCMCirt1d}} or
+\code{\link{MCMCirtKd}}.  (2) Do diagnostics and convergence
+checks on the resulting MCMC objects.  (3) Separate the three
+types of parameters (site scores, \code{x}, species intercepts,
+\code{a}, and species scores, \code{b}), by passing the MCMC
+through the \code{\link{getBO}} function.  (4) Use the other
+functions of this package to analyze the results
 (\code{\link{BOeta}}; \code{\link{BOflip}}; \code{\link{BOp}};
 \code{\link{BOrotate}}; \code{\link{BOswitch}}).
 }
@@ -22,7 +23,10 @@ nSite <- 25
 nSpec <- 10
 nIter <- 10000
 set.seed(1)
-eta <- cbind(1, rnorm(nSite)) \%*\% rbind(rnorm(nSpec), rnorm(nSpec))
+x <- rnorm(nSite)
+a <- rnorm(nSpec)
+b <- rnorm(nSpec)
+eta <- cbind(1, x) \%*\% rbind(a, b)
 e <- matrix(rnorm(nSite*nSpec), nSite, nSpec)
 p <- pnorm(eta + e)
 Y <- matrix(rbinom(nSite*nSpec, 1, p), nSite, nSpec)
@@ -36,15 +40,15 @@ Yirt <- MCMCirt1d(Y, mcmc = nIter, store.item = TRUE)
 BO <- getBO(Yirt, Y)
 
 ## fix identifiability
-densitiesX <- apply(BO$x, 2:3, logspline)
-denAtZero <- matrix(sapply(densitiesX, dlogspline, q = 0),
-                    dim(BO$x)[2:3])
-(refSites <- apply(denAtZero, 2, which.min))
-BO <- BOflip(BO, refSites)
+(refSite <- findRefSite(BO))
+BO <- BOflip(BO, refSite)
 
 ## get fitted values
 pFit <- BOp(BO)
 pFitMean <- apply(pFit, c(2, 3), mean)
 boxplot(pFitMean ~ Y)
+
+## ordination plot
+ordInt <- t(apply(BO$x, c(2, 3), quantile, probs = c(0.025, 0.975))[,,1])
 }
 
