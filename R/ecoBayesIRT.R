@@ -145,7 +145,7 @@ getBO <- function(mcmc, Y, index, name = c("x", "a", "b")) {
 ##' @export
 BOrotate <- function(BO) {
     checkBO(BO)
-    within(BO, {
+    BO <- within(BO, {
         xCenter <- sweep(x, c(1, 3), apply(x, c(1, 3), mean))
         svdXCenter <- apply(xCenter, 1, svd)
         d <- dim(b)[3]
@@ -157,6 +157,7 @@ BOrotate <- function(BO) {
             x[i,,] <- svdXCenter[[i]]$u
         }
     })
+    return(BO[c("a", "b", "x")])
 }
 
 ##' Switch axes labels
