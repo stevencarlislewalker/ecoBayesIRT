@@ -305,3 +305,40 @@ fitProbBins <- function(y, p, length = 11) {
     data.frame(obsProp = obsProp,
                expProp = expProp)
 }
+
+##' Differentiate between specific forms of uni- and bi-modality
+##'
+##' If there is one mode on either side of zero, then this function
+##' attempts to return the location of those two modes.  If there is
+##' only one mode, the function attempts to return the location of
+##' that mode.  The algorithm is based on optimizing over the negative
+##' numbers, then over the positive numbers, and seeing if either is
+##' on the boundary.  This is not well tested.
+##'
+##' @param den output of \code{\link{logspline}}
+##' @param tol tolerance when comparing modes with zero
+##' @return A vector with the location of one or two modes
+findModes <- function(den, tol = 1e-2) {
+                                        # compute two halves of the
+                                        # real line
+    interval <- list(c(den$range[1], 0),
+                     c(0, den$range[2]))
+                                        # optimize the density over
+                                        # both halves
+    opts <- lapply(interval, optimize,
+                   f = dlogspline, maximum = TRUE,
+                   fit = den)
+                                        # extract the locations of the
+                                        # maxima
+    maxs <- unlist(lapply(opts, "[", "maximum"))
+                                        # discard modes at zero
+                                        # (because they are probably
+                                        # not local maxima over the
+                                        # entire real line)
+    keeps <- !sapply(mapply(all.equal, maxs, c(0, 0),
+                            SIMPLIFY = FALSE,
+                            MoreArgs = list(tolerance = tol)),
+                     isTRUE)
+    return(unname(maxs[keeps]))
+}
+
