@@ -7,6 +7,7 @@ Author: Steve Walker
 Maintainer: Steve Walker <scwalker@math.mcmaster.ca>
 Depends:
     MCMCpack,
+    coda,
     abind,
     logspline
 Description: Helper functions for ecological Bayesian item response theory in R.
