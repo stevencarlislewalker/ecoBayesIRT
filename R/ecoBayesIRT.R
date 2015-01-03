@@ -189,7 +189,7 @@ BOswitch <- function(BO) {
 ##' @param BO Results of \code{\link{getBO}}
 ##' @param refSites Vector of reference sites for each axis
 ##' @return A Bayesian ordination with flipped axes
-##' @seealso \code{\link{BOflip}}
+##' @seealso \code{\link{mcmcFlip}}
 ##' @export
 BOflip <- function(BO, refSites) {
     checkBO(BO)
@@ -307,12 +307,6 @@ fitProbBins <- function(y, p, length = 11) {
                expProp = expProp)
 }
 
-set.seed(1)
-x <- rnorm(1000, c(-2, 2), 1)
-den <- logspline(x)
-plot(den)
-abline(v = findModes(den))
-
 ##' Differentiate between specific forms of uni- and bi-modality
 ##'
 ##' If there is one mode on either side of zero, then this function
@@ -377,7 +371,6 @@ findModes <- function(den, tol = 1e-2) {
 ##' with flipped axes
 ##' @seealso \code{\link{BOflip}}
 ##' @export
-##' @examples 
 mcmcFlip <- function(mcmc, refSites) {
     index <- BOindex(mcmc)
     nAxes <- max(index$axis, na.rm = TRUE)

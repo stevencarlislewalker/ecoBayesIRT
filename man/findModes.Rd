@@ -21,4 +21,11 @@ that mode.  The algorithm is based on optimizing over the negative
 numbers, then over the positive numbers, and seeing if either is
 on the boundary.  This is not well tested.
 }
+\examples{
+set.seed(1)
+x <- rnorm(1000, c(-2, 2), 1)
+den <- logspline(x)
+plot(den)
+abline(v = findModes(den))
+}
 
