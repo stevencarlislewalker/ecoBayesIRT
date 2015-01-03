@@ -16,4 +16,7 @@ A Bayesian ordination with flipped axes
 \description{
 Flip axes in a Bayesian ordination
 }
+\seealso{
+\code{\link{BOflip}}
+}
 

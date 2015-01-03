@@ -189,6 +189,7 @@ BOswitch <- function(BO) {
 ##' @param BO Results of \code{\link{getBO}}
 ##' @param refSites Vector of reference sites for each axis
 ##' @return A Bayesian ordination with flipped axes
+##' @seealso \code{\link{BOflip}}
 ##' @export
 BOflip <- function(BO, refSites) {
     checkBO(BO)
@@ -306,6 +307,12 @@ fitProbBins <- function(y, p, length = 11) {
                expProp = expProp)
 }
 
+set.seed(1)
+x <- rnorm(1000, c(-2, 2), 1)
+den <- logspline(x)
+plot(den)
+abline(v = findModes(den))
+
 ##' Differentiate between specific forms of uni- and bi-modality
 ##'
 ##' If there is one mode on either side of zero, then this function
@@ -318,7 +325,25 @@ fitProbBins <- function(y, p, length = 11) {
 ##' @param den output of \code{\link{logspline}}
 ##' @param tol tolerance when comparing modes with zero
 ##' @return A vector with the location of one or two modes
+##' @export
+##' @examples
+##' set.seed(1)
+##' x <- rnorm(1000, c(-2, 2), 1)
+##' den <- logspline(x)
+##' plot(den)
+##' abline(v = findModes(den))
 findModes <- function(den, tol = 1e-2) {
+                                        # find region with 'most' of
+                                        # the probability
+    importantRegion <- qlogspline(c(0.01, 0.99), den)
+                                        # if the important region is
+                                        # either all positive or all
+                                        # negative, just optimize and
+                                        # return a single mode
+    if(all(importantRegion > 0) || all(importantRegion < 0)) {
+        return(unname(optimize(dlogspline, importantRegion,
+                               maximum = TRUE, fit = den)$maximum))
+    }
                                         # compute two halves of the
                                         # real line
     interval <- list(c(den$range[1], 0),
@@ -342,3 +367,26 @@ findModes <- function(den, tol = 1e-2) {
     return(unname(maxs[keeps]))
 }
 
+
+
+##' Flip axes in an mcmc object for a Bayesian ordination
+##' 
+##' @param mcmc An \code{\link{mcmc}} object
+##' @param refSites Vector of reference sites for each axis
+##' @return An \code{\link{mcmc}} object for a Bayesian ordination
+##' with flipped axes
+##' @seealso \code{\link{BOflip}}
+##' @export
+##' @examples 
+mcmcFlip <- function(mcmc, refSites) {
+    index <- BOindex(mcmc)
+    nAxes <- max(index$axis, na.rm = TRUE)
+    for(i in 1:nAxes) {
+        thetaInds <- with(index, (type == "theta") & (axis == i))
+         betaInds <- with(index, (type ==  "beta") & (axis == i))
+        idntMult <- ifelse(mcmc[, which(thetaInds)[refSites[i]]] < 0, -1, 1)
+        mcmc[, thetaInds] <- sweep(mcmc[, thetaInds], 1, idntMult, "*")
+        mcmc[,  betaInds] <- sweep(mcmc[,  betaInds], 1, idntMult, "*")
+    }
+    return(mcmc)
+}
