@@ -18,6 +18,7 @@
 ## 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
+
 ##' Helper functions for ecological Bayesian item response theory in R
 ##' using MCMCpack
 ##'
@@ -34,6 +35,7 @@
 ##'
 ##' @docType package
 ##' @name ecoBayesIRT
+##' @import MCMCpack abind coda logspline
 ##'
 ##' @examples
 ##' ## simulate data
@@ -171,7 +173,7 @@ BOrotate <- function(BO) {
 ##' @export
 BOswitch <- function(BO) {
     checkBO(BO)
-    within(BO, {
+    BO <- within(BO, {
         for(i in 1:nrow(a)) {
             within <- c(x[-i,,1] %*% x[i,,1], x[-i,,2] %*% x[i,,2])
             among <- c(x[,,2] %*% x[i,,1], x[,,1] %*% x[i,,2])
@@ -181,6 +183,7 @@ BOswitch <- function(BO) {
             }
         }
     })
+    return(BO[c("a", "b", "x")])
 }
 
 
