@@ -217,7 +217,7 @@ BOeta <- function(BO) {
         nSite <- dim(BO$x)[2]
         nSpec <- dim(BO$b)[2]
         nSamp <- dim(BO$x)[1]
-        outerSamp <- function(i) outer(x[i,,], b[i,,])
+        outerSamp <- function(i) x[i,,] %*% t(b[i,,]) #  outer(x[i,,], b[i,,])
         A <- aperm(array(a, c(nSamp, nSpec, nSite)), c(1, 3, 2))
         XB <- aperm(simplify2array(lapply(seq_len(nSamp), outerSamp)), c(3,1,2))
         A + XB
@@ -385,4 +385,51 @@ mcmcFlip <- function(mcmc, refSites) {
         mcmc[,  betaInds] <- sweep(mcmc[,  betaInds], 1, idntMult, "*")
     }
     return(mcmc)
+}
+
+
+##' Fix 2d-ordinations
+##'
+##' @param BO 2d Bayesian ordination
+##' @param eta optional results of \code{BOeta(BO)}
+##' @param etaMean optional posterior mean of \code{eta}
+##' @export
+BO2dFix <- function(BO, eta, etaMean) {
+                                        # fill in anything that's
+                                        # missing
+    if(missing(eta)) eta <- BOeta(BO)
+    if(missing(etaMean)) etaMean <- apply(eta, 2:3, mean)
+
+                                        # calculate SVDs and
+                                        # correlations between SVDs of
+                                        # the posterior and the
+                                        # posterior mean
+    .ufn <- function(xx) svd(scale(xx, scale = FALSE))$u[,1:2]
+    etaSvd <- llply(etaScale, .ufn)
+    etaSvdMean <- .ufn(etaMean)
+    etaSvdCors <- aaply(BO$x, 1, cor, y = etaSvdMean)
+
+                                        # find the best ordering of
+                                        # the gradients in the
+                                        # posterior
+    .multfn <- function(xx) {
+        ord <- mult <- numeric(nrow(xx))
+        for(i in 1:nrow(xx)) {
+            ord[i] <- which.max(abs(xx[i, ]))
+            mult[i] <- sign(xx[i, ord[i]])
+            xx[, ord[i]] <- 0L
+        }
+        data.frame(ord = ord, mult = mult)
+    }
+    ordMult <- alply(etaSvdCors, 1, .multfn)
+
+                                        # fix the ordering
+    .fixfn <- function(i, BOx, ordMult) {
+        with(ordMult[[i]], {
+            flip <- sweep(BOx[i,,], 2, mult, "*")
+            return(flip[, ord])
+        })
+    }
+    BO$x <- laply(seq_along(ordMult), .fixfn, BOx = BO$x, ordMult = ordMult)
+    return(BO)
 }
