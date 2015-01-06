@@ -9,6 +9,7 @@ Depends:
     MCMCpack,
     coda,
     abind,
-    logspline
+    logspline,
+    plyr
 Description: Helper functions for ecological Bayesian item response theory in R.
 License: GPL (>= 2)

@@ -35,7 +35,7 @@
 ##'
 ##' @docType package
 ##' @name ecoBayesIRT
-##' @import MCMCpack abind coda logspline
+##' @import MCMCpack abind coda logspline plyr
 ##'
 ##' @examples
 ##' ## simulate data
@@ -395,6 +395,9 @@ mcmcFlip <- function(mcmc, refSites) {
 ##' @param etaMean optional posterior mean of \code{eta}
 ##' @export
 BO2dFix <- function(BO, eta, etaMean) {
+                                        # rotate (FIXME:  svd twice!)
+    BO <- BOrotate(BO)
+    
                                         # fill in anything that's
                                         # missing
     if(missing(eta)) eta <- BOeta(BO)
@@ -405,7 +408,7 @@ BO2dFix <- function(BO, eta, etaMean) {
                                         # the posterior and the
                                         # posterior mean
     .ufn <- function(xx) svd(scale(xx, scale = FALSE))$u[,1:2]
-    etaSvd <- llply(etaScale, .ufn)
+    etaSvd <- alply(eta, 1, .ufn)
     etaSvdMean <- .ufn(etaMean)
     etaSvdCors <- aaply(BO$x, 1, cor, y = etaSvdMean)
 
@@ -432,4 +435,74 @@ BO2dFix <- function(BO, eta, etaMean) {
     }
     BO$x <- laply(seq_along(ordMult), .fixfn, BOx = BO$x, ordMult = ordMult)
     return(BO)
+}
+
+##' Two-dimensional quantile plot
+##'
+##' @param x numeric vector
+##' @param y numeric vector the same length as \code{y}
+##' @param p probability
+##' @param ... other arguments to \code{\link{polygon}}
+##' @return plots a convex hull that contains a fraction \code{p} of
+##' the \code{x}-\code{y} points.
+##' @export
+quantile2d <- function(x, y, p, ...) {
+    hull <- chull(x, y)
+    xy <- cbind(x, y)
+    mahal <- mahalanobis(xy, apply(xy, 2, mean), cov(xy))
+    xyOrd <- xy[order(mahal), ][1:round(length(x)*p), ]
+    hullOrd <- chull(xyOrd[, 1], xyOrd[, 2])
+    polygon(xyOrd[hullOrd, 1], xyOrd[hullOrd, 2], ...)
+}
+
+##' Plot correlations between 2d indirect and 1d direct gradients
+##'
+##' @param xIndirect posterior distribution of indirect gradient
+##' values (MCMC iterations-by-sites-by-2 axes array)
+##' @param xDirect direct gradient (vector with same length as second
+##' dimension of \code{xIndirect})
+##' @param .seed random seed for generation of the null correlations
+##' @param plotArgs list of arguments for setting up the plotting region
+##' @param nullPtArgs list of arguments for plotting correlations from
+##' a null distribution
+##' @param xPtArgs list of arguments for plotting correlations with direct gradient
+##' @param nullContArgs list of arguments for plotting null distribution contour
+##' @param xContArgs list of arguments for plotting contour
+##' @export
+plot2dCors <- function(xIndirect, xDirect, .seed = 1,
+                       plotArgs = list(las = 1, 
+                           xlim = c(-1, 1), ylim = c(-1, 1),
+                           xlab = "", ylab = ""),
+                       nullPtArgs = list(col = rgb(1, 0, 0, 0.1)),
+                       xPtArgs = list(col = rgb(0, 0, 1, 0.1)),
+                       nullContArgs = list(col = "red", lwd = 3, cont = 95),
+                       xContArgs = list(col = "blue", lwd = 3, cont = 95)) {
+
+    message("computing correlations...")
+    xCors <- apply(xIndirect, 1, cor, xDirect)
+    .nullfn <- function(i, xI, xD) {
+        apply(xI[i,,], 2, cor, xD[sample(dim(xI)[2])])
+    }
+    set.seed(.seed)
+    nullCors <- sapply(1:dim(xIndirect)[1], .nullfn,
+                       xI = xIndirect,
+                       xD = xDirect)
+    
+    message("computing densities...")
+    xDen <- kde(t(xCors))
+    nullDen <- kde(t(nullCors))
+    
+    message("plotting...")
+    plotArgs <- c(list(x = 0, y = 0, type = "n"), plotArgs)
+    nullPtArgs = c(list(x = t(nullCors)), nullPtArgs)
+    xPtArgs = c(list(x = t(xCors)), xPtArgs)
+    nullContArgs = c(list(x = nullDen, add = TRUE), nullContArgs)
+    xContArgs = c(list(x = xDen, add = TRUE), xContArgs)
+    do.call(plot, plotArgs)
+    abline(v = 0, h = 0, col = grey(0.5))
+    do.call(points, xPtArgs)
+    do.call(points, nullPtArgs)
+    do.call(plot, xContArgs)
+    do.call(plot, nullContArgs)
+    invisible()
 }
