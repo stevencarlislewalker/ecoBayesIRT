@@ -172,34 +172,103 @@ setAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), value) {
     return(mcmc)
 }
 
-# swapAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), ord)
+#swapAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), ord) {
 
+##' Follows
+##'
+##' Syntactic sugar for composition of two functions. Useful for apply
+##' functions.
+##' 
+##' @param f a function of one argument
+##' @param g another function with range equal to the domain of
+##' \code{f}
+##' @param ... additional arguments to \code{g}
+##' @return The function given by \code{f} follows \code{g} of
+##' \code{x}.
+##' @rdname follows
+##' @export
+##' @examples
+##' sqr <- function(x) x^2
+##' min10 <- function(x) x - 10
+##' (sqr %f% min10)(2)
+##' div5 <- function(x) x/5
+##' (sqr %f% min10 %f% div5)(2)
+##' (unique %f% unlist %f% `[`)(letters[1:10], c(3, 2))
+follows <- function(f, g) function(x, ...) f(g(x, ...))
+
+##' @rdname follows
+##' @export
+`%f%` <- function(f, g) follows(f, g)
+
+
+
+##' Returns a vector or array or list of values obtained by applying a
+##' function to margins of two arrays or matrices.
+##'
+##' @param X,Y arrays (each potentially a matrix)
+##' @param XMARGIN,YMARGIN vectors giving the subscripts which the
+##' function will be applied over.  see \code{\link{apply}} for more
+##' information. for the special case here, note that
+##' \code{all(dim(X)[XMARGIN] == dim(Y)[YMARGIN])} must be
+##' \code{TRUE}.
+##' @param FUN the function to be applied.
+##' @param ... more arguments to \code{FUN}.
+##' @return a new array, or list if \code{\link{simplify2array}}
+##' cannot do it's job.
 ##' @export
 apply2arrays <- function(X, Y, XMARGIN, YMARGIN, FUN, ...) {
     dX <- dim(X)
     dY <- dim(Y)
+                                        # marginal dimensions
     dXmarg <- dX[XMARGIN]
     dYmarg <- dY[YMARGIN]
     if(!all(dXmarg == dYmarg)) stop("margins do not match")
-    XANS <- setdiff(1:length(dX), XMARGIN)
-    YANS <- setdiff(1:length(dY), YMARGIN)
-    dXans <- dX[XANS]
-    dYans <- dY[YANS]
-    X <- aperm(X, c(XMARGIN, XANS))
-    Y <- aperm(Y, c(YMARGIN, YANS))
-    dim(X) <- c(prod(dXmarg), dXans)
-    dim(Y) <- c(prod(dYmarg), dYans)
-    l... <- list(...)
+
+                                        # dimensions to marginalize
+                                        # over
+    XOVER <- setdiff(1:length(dX), XMARGIN)
+    YOVER <- setdiff(1:length(dY), YMARGIN)
+    dXover <- dX[XOVER]
+    dYover <- dY[YOVER]
+
+                                        # put marginal dimensions
+                                        # first (FIXME: maybe not best
+                                        # ordering?)
+    X <- aperm(X, c(XMARGIN, XOVER))
+    Y <- aperm(Y, c(YMARGIN, YOVER))
+
+                                        # collapse marginal dimensions
+                                        # into one
+    dim(X) <- c(prod(dXmarg), dXover)
+    dim(Y) <- c(prod(dYmarg), dYover)
+
+                                        # convert FUN into a function
+                                        # that takes a single list as
+                                        # an argument
     sFUN <- splat(FUN)
+
+                                        # loop over margin
     ans <- list()
     for(i in seq_len(dim(X)[1])) {
-        ans[[i]] <- sFUN(list(take(X, 1, i, drop = TRUE),
-                              take(Y, 1, i, drop = TRUE)), l...)
+                                        # structure (instead of drop)
+                                        # required to drop first (but
+                                        # not any other) dimensions
+        ans[[i]] <- sFUN(list(structure(take(X, 1, i), dim = dim(X)[-1]),
+                              structure(take(Y, 1, i), dim = dim(Y)[-1])
+                              ), ...)
     }
-    ans <- simplify2array(ans)
-    nDimAns <- length(da <- dim(ans))
-    ans <- aperm(ans, c(nDimAns, 1:(nDimAns-1)))
-    dim(ans) <- c(dXmarg, da[-nDimAns])
+
+                                        # convert ans to an array, put
+                                        # the margin first again, and
+                                        # add back the dimensions of
+                                        # the margin
+    ans <- simplify2array(ans) # FIXME: maybe add SIMPLIFY to argument
+                               # list?
+    if(is.atomic(ans)) {
+        nDimAns <- length(da <- dim(ans))
+        ans <- aperm(ans, c(nDimAns, 1:(nDimAns-1)))
+        dim(ans) <- c(dXmarg, da[-nDimAns])
+    }
     return(ans)
 }
 
