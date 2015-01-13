@@ -73,42 +73,45 @@
 NULL
 
 
-##' only meant to be used as interactive functions
-##' (see http://adv-r.had.co.nz/Computing-on-the-language.html#calling-from-another-function)
+##' Extract and replace pieces of an item response theory mcmc
+##'
+##' \code{extractIRT} and \code{replaceIRT} are only to be used in
+##' interactive mode (i.e. not used within functions).  see
+##' http://adv-r.had.co.nz/Computing-on-the-language.html#calling-from-another-function.
+##' It is much safer and easier to read to use the \code{x}, \code{b},
+##' and \code{a} functions, which are used to extract and replace all
+##' gradient values, species slopes, and species intercepts (note
+##' these functions return as arrays).  \code{getAxisParamArray} and
+##' \code{setAxisParamArray} are mostly for internal use, because
+##' usually \code{x}, \code{b}, and \code{a} will provide everything
+##' someone might need.
+##'
+##' @param mcmc An \code{\link{mcmc}} object from a fitted IRT model.
+##' @param condition An expression evaluating to a
+##' \code{\link{logical}} vector the same length as the number of
+##' columns (parameters) in \code{mcmc}.
+##' @param index Optional (not really needed)
+##' @param value Replacement value.
+##' @param param Which parameter to obtain/replace (\code{theta},
+##' \code{beta}, or \code{alpha}).
+##' @param ord \code{itersIRT(mcmc)} by \code{axesIRT(mcmc)} matrix
+##' with the orderings of the axes.
+##' @return Another \code{\link{mcmc}} object with (1) only the
+##' extracted piece (for \code{extractIRT}) or (2) the replaced values
+##' (for \code{replaceIRT}).
 ##' @export
 extractIRT <- function(mcmc, condition, index) {
     if(missing(index)) index <- BOindex(mcmc)
     mcmc[, eval(substitute(condition), index)]
 }
-
+##' @rdname extractIRT
 ##' @export
 replaceIRT <- function(mcmc, condition, value, index) {
     if(missing(index)) index <- BOindex(mcmc)
     mcmc[, eval(substitute(condition), index)] <- value
     return(mcmc)
 }
-
-##' @export
-dimIRT <- function(mcmc, index) {
-    if(missing(index)) index <- BOindex(mcmc)
-    c(iters = nrow(mcmc),
-      sites = length(unique(subset(index, type == "theta")$object)),
-      species = length(unique(subset(index, type == "beta")$object)),
-      axes = max(index$axis, na.rm = TRUE))
-}
-
-##' @export
-itersIRT   <- function(mcmc, index) dimIRT(mcmc, index)["iters"]
-
-##' @export
-sitesIRT   <- function(mcmc, index) dimIRT(mcmc, index)["sites"]
-
-##' @export
-speciesIRT <- function(mcmc, index) dimIRT(mcmc, index)["species"]
-
-##' @export
-axesIRT    <- function(mcmc, index) dimIRT(mcmc, index)["axes"]
-
+##' @rdname extractIRT
 ##' @export
 a <- function(mcmc, index) {
     if(missing(index)) index <- BOindex(mcmc)
@@ -117,36 +120,36 @@ a <- function(mcmc, index) {
     colnames(out) <- index[condition, "object"]
     return(out)
 }
-
+##' @rdname extractIRT
 ##' @export
 b <- function(mcmc, index) {
     if(missing(index)) index <- BOindex(mcmc)
     getAxisParamArray(mcmc, index, "beta")
 }
-
+##' @rdname extractIRT
 ##' @export
 x <- function(mcmc, index) {
     if(missing(index)) index <- BOindex(mcmc)
     getAxisParamArray(mcmc, index, "theta")
 }
-
+##' @rdname extractIRT
 ##' @export
 `a<-` <- function(mcmc, value) {
     index <- BOindex(mcmc)
     mcmc[, with(index, type == "alpha")] <- value
     return(mcmc)
 }
-
+##' @rdname extractIRT
 ##' @export
 `b<-` <- function(mcmc, value) {
     mcmc <- setAxisParamArray(mcmc, param = "beta", value = value)
 }
-
+##' @rdname extractIRT
 ##' @export
 `x<-` <- function(mcmc, value) {
     mcmc <- setAxisParamArray(mcmc, param = "theta", value = value)
 }
-
+##' @rdname extractIRT
 ##' @export
 getAxisParamArray <- function(mcmc, index, param = c("beta", "theta")) {
     if(missing(index)) index <- BOindex(mcmc)
@@ -160,7 +163,7 @@ getAxisParamArray <- function(mcmc, index, param = c("beta", "theta")) {
     dimnames(out)[[2]] <- subset(index, conditioni)$object
     return(out)
 }
-
+##' @rdname extractIRT
 ##' @export
 setAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), value) {
     if(missing(index)) index <- BOindex(mcmc)
@@ -171,8 +174,38 @@ setAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), value) {
     }
     return(mcmc)
 }
+##' @rdname extractIRT
+##' @export
+swapAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), ord) {
+    ## nothing here yet
+}
 
-#swapAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), ord) {
+##' The dimensions of an item response theory mcmc
+##'
+##' @inheritParams extractIRT
+##' 
+##' @export
+dimIRT <- function(mcmc, index) {
+    if(missing(index)) index <- BOindex(mcmc)
+    c(iters = nrow(mcmc),
+      sites = length(unique(subset(index, type == "theta")$object)),
+      species = length(unique(subset(index, type == "beta")$object)),
+      axes = max(index$axis, na.rm = TRUE))
+}
+##' @rdname dimIRT
+##' @export
+itersIRT   <- function(mcmc, index) dimIRT(mcmc, index)["iters"]
+##' @rdname dimIRT
+##' @export
+sitesIRT   <- function(mcmc, index) dimIRT(mcmc, index)["sites"]
+##' @rdname dimIRT
+##' @export
+speciesIRT <- function(mcmc, index) dimIRT(mcmc, index)["species"]
+##' @rdname dimIRT
+##' @export
+axesIRT    <- function(mcmc, index) dimIRT(mcmc, index)["axes"]
+
+
 
 ##' Follows
 ##'
@@ -215,6 +248,12 @@ follows <- function(f, g) function(x, ...) f(g(x, ...))
 ##' @param ... more arguments to \code{FUN}.
 ##' @return a new array, or list if \code{\link{simplify2array}}
 ##' cannot do it's job.
+##' @examples
+##' dims <- c(4, 2, 3, 1, 2)
+##' set.seed(1)
+##' (A <- array(rnorm(prod(dims[-2])), dims[-2]))
+##' (B <- array(rnorm(prod(dims[-(3:4)])), dims[-(3:4)]))
+##' apply2arrays(A, B, c(1, 4), c(1, 3), `%*%`)
 ##' @export
 apply2arrays <- function(X, Y, XMARGIN, YMARGIN, FUN, ...) {
     dX <- dim(X)

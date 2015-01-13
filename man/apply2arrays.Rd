@@ -27,4 +27,11 @@ cannot do it's job.
 Returns a vector or array or list of values obtained by applying a
 function to margins of two arrays or matrices.
 }
+\examples{
+dims <- c(4, 2, 3, 1, 2)
+set.seed(1)
+(A <- array(rnorm(prod(dims[-2])), dims[-2]))
+(B <- array(rnorm(prod(dims[-(3:4)])), dims[-(3:4)]))
+apply2arrays(A, B, c(1, 4), c(1, 3), `\%*\%`)
+}
 
