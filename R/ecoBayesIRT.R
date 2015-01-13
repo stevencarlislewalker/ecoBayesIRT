@@ -77,7 +77,7 @@ NULL
 ##'
 ##' \code{extractIRT} and \code{replaceIRT} are only to be used in
 ##' interactive mode (i.e. not used within functions).  see
-##' http://adv-r.had.co.nz/Computing-on-the-language.html#calling-from-another-function.
+##' \url{http://adv-r.had.co.nz/Computing-on-the-language.html#calling-from-another-function}.
 ##' It is much safer and easier to read to use the \code{x}, \code{b},
 ##' and \code{a} functions, which are used to extract and replace all
 ##' gradient values, species slopes, and species intercepts (note
