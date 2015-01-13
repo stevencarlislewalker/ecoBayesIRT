@@ -73,6 +73,138 @@
 NULL
 
 
+##' only meant to be used as interactive functions
+##' (see http://adv-r.had.co.nz/Computing-on-the-language.html#calling-from-another-function)
+##' @export
+extractIRT <- function(mcmc, condition, index) {
+    if(missing(index)) index <- BOindex(mcmc)
+    mcmc[, eval(substitute(condition), index)]
+}
+
+##' @export
+replaceIRT <- function(mcmc, condition, value, index) {
+    if(missing(index)) index <- BOindex(mcmc)
+    mcmc[, eval(substitute(condition), index)] <- value
+    return(mcmc)
+}
+
+##' @export
+dimIRT <- function(mcmc, index) {
+    if(missing(index)) index <- BOindex(mcmc)
+    c(iters = nrow(mcmc),
+      sites = length(unique(subset(index, type == "theta")$object)),
+      species = length(unique(subset(index, type == "beta")$object)),
+      axes = max(index$axis, na.rm = TRUE))
+}
+
+##' @export
+itersIRT   <- function(mcmc, index) dimIRT(mcmc, index)["iters"]
+
+##' @export
+sitesIRT   <- function(mcmc, index) dimIRT(mcmc, index)["sites"]
+
+##' @export
+speciesIRT <- function(mcmc, index) dimIRT(mcmc, index)["species"]
+
+##' @export
+axesIRT    <- function(mcmc, index) dimIRT(mcmc, index)["axes"]
+
+##' @export
+a <- function(mcmc, index) {
+    if(missing(index)) index <- BOindex(mcmc)
+    condition <- with(index, type == "alpha")
+    out <- mcmc[, condition]
+    colnames(out) <- index[condition, "object"]
+    return(out)
+}
+
+##' @export
+b <- function(mcmc, index) {
+    if(missing(index)) index <- BOindex(mcmc)
+    getAxisParamArray(mcmc, index, "beta")
+}
+
+##' @export
+x <- function(mcmc, index) {
+    if(missing(index)) index <- BOindex(mcmc)
+    getAxisParamArray(mcmc, index, "theta")
+}
+
+##' @export
+`a<-` <- function(mcmc, value) {
+    index <- BOindex(mcmc)
+    mcmc[, with(index, type == "alpha")] <- value
+    return(mcmc)
+}
+
+##' @export
+`b<-` <- function(mcmc, value) {
+    mcmc <- setAxisParamArray(mcmc, param = "beta", value = value)
+}
+
+##' @export
+`x<-` <- function(mcmc, value) {
+    mcmc <- setAxisParamArray(mcmc, param = "theta", value = value)
+}
+
+##' @export
+getAxisParamArray <- function(mcmc, index, param = c("beta", "theta")) {
+    if(missing(index)) index <- BOindex(mcmc)
+    param <- param[1]
+    out <- list()
+    for(i in 1:axesIRT(mcmc, index)) {
+        conditioni <- with(index, (type == param) & (axis == i))
+        out[[i]] <- mcmc[, conditioni]
+    }
+    out <- aperm(do.call(abind, c(out, list(along = 0))), c(2, 3, 1))
+    dimnames(out)[[2]] <- subset(index, conditioni)$object
+    return(out)
+}
+
+##' @export
+setAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), value) {
+    if(missing(index)) index <- BOindex(mcmc)
+    param <- param[1]
+    for(i in 1:axesIRT(mcmc, index)) {
+        conditioni <- with(index, (type == param) & (axis == i))
+        mcmc[, conditioni] <- value[, , i]
+    }
+    return(mcmc)
+}
+
+# swapAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), ord)
+
+##' @export
+apply2arrays <- function(X, Y, XMARGIN, YMARGIN, FUN, ...) {
+    dX <- dim(X)
+    dY <- dim(Y)
+    dXmarg <- dX[XMARGIN]
+    dYmarg <- dY[YMARGIN]
+    if(!all(dXmarg == dYmarg)) stop("margins do not match")
+    XANS <- setdiff(1:length(dX), XMARGIN)
+    YANS <- setdiff(1:length(dY), YMARGIN)
+    dXans <- dX[XANS]
+    dYans <- dY[YANS]
+    X <- aperm(X, c(XMARGIN, XANS))
+    Y <- aperm(Y, c(YMARGIN, YANS))
+    dim(X) <- c(prod(dXmarg), dXans)
+    dim(Y) <- c(prod(dYmarg), dYans)
+    l... <- list(...)
+    sFUN <- splat(FUN)
+    ans <- list()
+    for(i in seq_len(dim(X)[1])) {
+        ans[[i]] <- sFUN(list(take(X, 1, i, drop = TRUE),
+                              take(Y, 1, i, drop = TRUE)), l...)
+    }
+    ans <- simplify2array(ans)
+    nDimAns <- length(da <- dim(ans))
+    ans <- aperm(ans, c(nDimAns, 1:(nDimAns-1)))
+    dim(ans) <- c(dXmarg, da[-nDimAns])
+    return(ans)
+}
+
+
+
 ##' Construct an index for a Bayesian ordination (BO) mcmc object
 ##'
 ##' @param mcmc An mcmc object
@@ -83,11 +215,36 @@ NULL
 ##' parameter).
 ##' @export
 BOindex <- function(mcmc) {
+                                        # the names of model
+                                        # parameters
+                                        # (i.e. colnames(mcmc)) are
+                                        # stored with dots separating
+                                        # three pieces of information:
+                                        # (1) type of parameter
+                                        # (i.e. alpha, beta, theta),
+                                        # (2) object associated with
+                                        # the parameter (e.g. a
+                                        # species or a site name), and
+                                        # (3) the axis that the
+                                        # parameter is associated
+                                        # with.  namesList is a list,
+                                        # each element of which gives
+                                        # these three pieces of
+                                        # information for each model
+                                        # parameter.
     namesList <- strsplit(colnames(mcmc), ".", TRUE)
+
+                                        # put these three pieces of
+                                        # information into a data
+                                        # frame, with one row per
+                                        # model parameter.
     namesDF <- as.data.frame(t(sapply(namesList, "[", 1:3)),
                              stringsAsFactors = FALSE)
     names(namesDF) <- c("type", "object", "axis")
     namesDF$axis <- as.numeric(namesDF$axis)
+
+                                        # gracefully handle the
+                                        # special case of one axis.
     oneAxis <- all(is.na(namesDF$axis))
     if(oneAxis) {
         namesDF <- within(namesDF, {
@@ -213,7 +370,7 @@ BOflip <- function(BO, refSites) {
 ##' @export
 BOeta <- function(BO) {
     checkBO(BO)
-    with(BO, {
+    eta <- with(BO, {
         nSite <- dim(BO$x)[2]
         nSpec <- dim(BO$b)[2]
         nSamp <- dim(BO$x)[1]
@@ -222,6 +379,9 @@ BOeta <- function(BO) {
         XB <- aperm(simplify2array(lapply(seq_len(nSamp), outerSamp)), c(3,1,2))
         A + XB
     })
+    dimnames(eta)[2:3] <- list(dimnames(BO$x)[[2]],
+                               dimnames(BO$b)[[2]])
+    return(eta)
 }
 
 ##' Compute the posterior of the fitted values from a Bayesian
@@ -273,8 +433,8 @@ findRefSite <- function(BO) {
     apply(denAtZero, 2, which.min)
 }
 
-##' Pairwise comparisons among columns in binary or probability
-##' matrices
+##' All possible pairwise comparisons among columns in binary or
+##' probability matrices
 ##'
 ##' @param y binary or probability matrix
 ##' @return 4-d array with comparisons
@@ -387,6 +547,65 @@ mcmcFlip <- function(mcmc, refSites) {
     return(mcmc)
 }
 
+## mcmcFlipOrd <- function(mcmc, multOrd) {
+##     index <- BOindex(mcmc)
+##     nAxes <- max(index$axis, na.rm = TRUE)
+##     nIter <- nrow(mcmc)
+##     nSite <- with(index, type == "theta")
+##     for(i in 1:nAxes) {
+##         thetaInds <- with(index, (type == "theta") & (axis == i))
+##          betaInds <- with(index, (type ==  "beta") & (axis == i))        
+##         mcmc[, thetaInds] <- sweep(mcmc[, thetaInds], 1, multOrd[i,,2], "*")
+##         mcmc[,  betaInds] <- sweep(mcmc[,  betaInds], 1, multOrd[i,,2], "*")
+##     }
+##     for(i in 1:nIter) {
+##         thetaInds <- with(index, (type == "theta")
+##     }
+##     return(mcmc)
+## }
+
+## getOrdMult <- function(BO, eta, etaMean) {
+##     nAxes <- dim(BO$x)[3]
+##                                         # rotate (FIXME:  svd twice!)
+##     if(nAxes > 1) BO <- BOrotate(BO)
+    
+##                                         # fill in anything that's
+##                                         # missing
+##     print("calculating eta stuff")
+##     if(missing(eta)) eta <- BOeta(BO)
+##     if(missing(etaMean)) etaMean <- apply(eta, 2:3, mean)
+
+##                                         # calculate SVDs and
+##                                         # correlations between SVDs of
+##                                         # the posterior and the
+##                                         # posterior mean
+##     print("calculating means and cors")
+##     .ufn <- function(xx) svd(scale(xx, scale = FALSE))$u[, 1:nAxes, drop = FALSE]
+##     etaSvd <- alply(eta, 1, .ufn)
+##     etaSvdMean <- .ufn(etaMean)
+##     etaSvdCors <- aaply(BO$x, 1, cor, y = etaSvdMean)
+
+##                                         # find the best ordering of
+##                                         # the gradients in the
+##                                         # posterior
+##     print("calculating orderings")
+##     .multfn <- function(xx) {
+##         if(nAxes == 1L) dim(xx) <- c(length(xx), 1)
+##         ord <- mult <- numeric(nrow(xx))
+##         for(i in 1:nrow(xx)) {
+##             ord[i] <- which.max(abs(xx[i, ]))
+##             mult[i] <- sign(xx[i, ord[i]])
+##             xx[, ord[i]] <- 0L
+##         }
+##         cbind(ord = ord, mult = mult)
+##     }
+##     if(nAxes == 1) {
+##         ordMult <- laply(etaSvdCors, .multfn)
+##     } else {
+##         ordMult <- aaply(etaSvdCors, 1, .multfn)
+##     }
+##     return(ordMult)
+## }
 
 ##' Fix 2d-ordinations
 ##'
@@ -395,11 +614,13 @@ mcmcFlip <- function(mcmc, refSites) {
 ##' @param etaMean optional posterior mean of \code{eta}
 ##' @export
 BO2dFix <- function(BO, eta, etaMean) {
+    nAxes <- dim(BO$x)[3]
                                         # rotate (FIXME:  svd twice!)
-    BO <- BOrotate(BO)
+    if(nAxes > 1) BO <- BOrotate(BO)
     
                                         # fill in anything that's
                                         # missing
+    print("calculating eta stuff")
     if(missing(eta)) eta <- BOeta(BO)
     if(missing(etaMean)) etaMean <- apply(eta, 2:3, mean)
 
@@ -407,7 +628,8 @@ BO2dFix <- function(BO, eta, etaMean) {
                                         # correlations between SVDs of
                                         # the posterior and the
                                         # posterior mean
-    .ufn <- function(xx) svd(scale(xx, scale = FALSE))$u[,1:2]
+    print("calculating means and cors")
+    .ufn <- function(xx) svd(scale(xx, scale = FALSE))$u[, 1:nAxes, drop = FALSE]
     etaSvd <- alply(eta, 1, .ufn)
     etaSvdMean <- .ufn(etaMean)
     etaSvdCors <- aaply(BO$x, 1, cor, y = etaSvdMean)
@@ -415,7 +637,9 @@ BO2dFix <- function(BO, eta, etaMean) {
                                         # find the best ordering of
                                         # the gradients in the
                                         # posterior
+    print("calculating orderings")
     .multfn <- function(xx) {
+        if(nAxes == 1L) dim(xx) <- c(length(xx), 1)
         ord <- mult <- numeric(nrow(xx))
         for(i in 1:nrow(xx)) {
             ord[i] <- which.max(abs(xx[i, ]))
@@ -424,16 +648,20 @@ BO2dFix <- function(BO, eta, etaMean) {
         }
         data.frame(ord = ord, mult = mult)
     }
-    ordMult <- alply(etaSvdCors, 1, .multfn)
-
-                                        # fix the ordering
-    .fixfn <- function(i, BOx, ordMult) {
+    if(nAxes == 1) {
+        ordMult <- llply(etaSvdCors, .multfn)
+    } else {
+        ordMult <- alply(etaSvdCors, 1, .multfn)
+    }
+    
+    .fixfn <- function(i, BOelement, ordMult) {
         with(ordMult[[i]], {
-            flip <- sweep(BOx[i,,], 2, mult, "*")
-            return(flip[, ord])
+            flip <- sweep(BOelement[i,,,drop = FALSE], 3, mult, "*")
+            return(flip[, , ord])
         })
     }
-    BO$x <- laply(seq_along(ordMult), .fixfn, BOx = BO$x, ordMult = ordMult)
+    BO$x <- laply(seq_along(ordMult), .fixfn, BOelement = BO$x, ordMult = ordMult)
+    BO$b <- laply(seq_along(ordMult), .fixfn, BOelement = BO$b, ordMult = ordMult)
     return(BO)
 }
 
@@ -475,8 +703,8 @@ plot2dCors <- function(xIndirect, xDirect, .seed = 1,
                            xlab = "", ylab = ""),
                        nullPtArgs = list(col = rgb(1, 0, 0, 0.1)),
                        xPtArgs = list(col = rgb(0, 0, 1, 0.1)),
-                       nullContArgs = list(col = "red", lwd = 3, cont = 95),
-                       xContArgs = list(col = "blue", lwd = 3, cont = 95)) {
+                       nullContArgs = list(lwd = 3, cont = 95),
+                       xContArgs = list(lwd = 3, cont = 95)) {
 
     message("computing correlations...")
     xCors <- apply(xIndirect, 1, cor, xDirect)
