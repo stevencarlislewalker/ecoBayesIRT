@@ -176,8 +176,17 @@ setAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), value) {
 }
 ##' @rdname extractIRT
 ##' @export
-swapAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), ord) {
-    ## nothing here yet
+swapAxisParamArray <- function(mcmc, ord, param = c("beta", "theta")) {
+                                        # performing replacements on a
+                                        # temporary copy of x(mcmc) is
+                                        # absolutely vital for
+                                        # maintaining scalable
+                                        # performance!
+    xTmp <- x(mcmc) # begin working on copy
+    nIters <- dim(xTmp)[1]
+    for(i in seq_len(nIters)) xTmp[i,,] <- xTmp[i, , ord[i,]]
+    x(mcmc) <- xTmp # end working on copy
+    return(mcmc)
 }
 
 ##' The dimensions of an item response theory mcmc
@@ -232,6 +241,24 @@ follows <- function(f, g) function(x, ...) f(g(x, ...))
 ##' @rdname follows
 ##' @export
 `%f%` <- function(f, g) follows(f, g)
+
+
+##' Give values to certain dimension of an R array
+##'
+##' Modelled after the \code{\link{take}} function in the \code{plyr}
+##' package.
+##'
+##' @param x matrix or array to subset
+##' @param along dimension to subset along
+##' @param indices the indices to select
+##' @param value the values to give
+##' @export
+give <- function (x, along, indices, value) {
+    nd <- length(dim(x))
+    index <- as.list(rep(TRUE, nd))
+    index[along] <- indices
+    eval(as.call(c(as.name("[<-"), as.name("x"), index, value = value)))
+}
 
 
 
@@ -315,7 +342,7 @@ apply2arrays <- function(X, Y, XMARGIN, YMARGIN, FUN, ...) {
 
 ##' Construct an index for a Bayesian ordination (BO) mcmc object
 ##'
-##' @param mcmc An mcmc object
+##' @param mcmc An \code{mcmc} or \code{mcmc.list} object
 ##' @return A data frame with one row per model parameter.  Each
 ##' row gives the (1) parameter type, (2) object associated with 
 ##' that parameter (e.g. species name), and (3) the ordination 
@@ -323,6 +350,8 @@ apply2arrays <- function(X, Y, XMARGIN, YMARGIN, FUN, ...) {
 ##' parameter).
 ##' @export
 BOindex <- function(mcmc) {
+    index <- attr(mcmc, "index")
+    if(!is.null(index)) return(index)
                                         # the names of model
                                         # parameters
                                         # (i.e. colnames(mcmc)) are
@@ -360,6 +389,20 @@ BOindex <- function(mcmc) {
         })
     }
     return(namesDF)
+}
+##' @rdname BOindex
+##' @export
+setIndex <- function(mcmc) UseMethod("setIndex")
+##' @rdname BOindex
+##' @export
+setIndex.mcmc <- function(mcmc) structure(mcmc, index = BOindex(mcmc))
+##' @rdname BOindex
+##' @export
+setIndex.mcmc.list <- function(mcmc) {
+    for(i in seq_along(mcmc)) {
+        attr(mcmc[[i]], "index") <- BOindex(mcmc[[i]])
+    }
+    structure(mcmc, class = "mcmc.list")
 }
 
 ##' Get parameters from a Bayesian ordination (getBO)

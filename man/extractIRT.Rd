@@ -33,7 +33,7 @@ getAxisParamArray(mcmc, index, param = c("beta", "theta"))
 
 setAxisParamArray(mcmc, index, param = c("beta", "theta"), value)
 
-swapAxisParamArray(mcmc, index, param = c("beta", "theta"), ord)
+swapAxisParamArray(mcmc, ord, param = c("beta", "theta"))
 }
 \arguments{
 \item{mcmc}{An \code{\link{mcmc}} object from a fitted IRT model.}
