@@ -182,12 +182,26 @@ swapAxisParamArray <- function(mcmc, ord, param = c("beta", "theta")) {
                                         # absolutely vital for
                                         # maintaining scalable
                                         # performance!
-    xTmp <- x(mcmc) # begin working on copy
-    nIters <- dim(xTmp)[1]
-    for(i in seq_len(nIters)) xTmp[i,,] <- xTmp[i, , ord[i,]]
-    x(mcmc) <- xTmp # end working on copy
+    if(axesIRT(mcmc) == 1L) stop("swaping axes is meaningless with only one axis")
+    nIters <- itersIRT(mcmc)
+    if(any(param == "theta")) {
+        xTmp <- x(mcmc) # begin working on copy
+        for(i in seq_len(nIters)) xTmp[i,,] <- xTmp[i, , ord[i,]]
+        x(mcmc) <- xTmp # end working on copy
+    }
+    if(any(param == "beta")) {
+        bTmp <- b(mcmc) # begin working on copy
+        for(i in seq_len(nIters)) bTmp[i,,] <- bTmp[i, , ord[i,]]
+        b(mcmc) <- bTmp # end working on copy
+    }
     return(mcmc)
 }
+##' @rdname extractIRT
+##' @export
+xSwap <- function(mcmc, ord) swapAxisParamArray(mcmc, ord, "theta")
+##' @rdname extractIRT
+##' @export
+bSwap <- function(mcmc, ord) swapAxisParamArray(mcmc, ord, "beta")
 
 ##' The dimensions of an item response theory mcmc
 ##'
