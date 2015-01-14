@@ -94,8 +94,6 @@ NULL
 ##' @param value Replacement value.
 ##' @param param Which parameter to obtain/replace (\code{theta},
 ##' \code{beta}, or \code{alpha}).
-##' @param ord \code{itersIRT(mcmc)} by \code{axesIRT(mcmc)} matrix
-##' with the orderings of the axes.
 ##' @return Another \code{\link{mcmc}} object with (1) only the
 ##' extracted piece (for \code{extractIRT}) or (2) the replaced values
 ##' (for \code{replaceIRT}).
@@ -174,9 +172,17 @@ setAxisParamArray <- function(mcmc, index, param = c("beta", "theta"), value) {
     }
     return(mcmc)
 }
-##' @rdname extractIRT
+
+##' Swap and flip axes of an item response theory mcmc
+##'
+##' @inheritParams extractIRT
+##' @param ord \code{itersIRT(mcmc)} by \code{axesIRT(mcmc)} matrix
+##' with the orderings of the axes.
+##' @param mult \code{itersIRT(mcmc)} by \code{axesIRT(mcmc)} matrix
+##' \code{-1}/\code{1} multipliers for flipping the axes.
+##' @rdname swapFlipAxesIRT
 ##' @export
-swapAxisParamArray <- function(mcmc, ord, param = c("beta", "theta")) {
+swapAxesIRT <- function(mcmc, ord, param = c("beta", "theta")) {
                                         # performing replacements on a
                                         # temporary copy of x(mcmc) is
                                         # absolutely vital for
@@ -196,12 +202,18 @@ swapAxisParamArray <- function(mcmc, ord, param = c("beta", "theta")) {
     }
     return(mcmc)
 }
-##' @rdname extractIRT
+##' @rdname swapFlipAxesIRT
 ##' @export
-xSwap <- function(mcmc, ord) swapAxisParamArray(mcmc, ord, "theta")
-##' @rdname extractIRT
-##' @export
-bSwap <- function(mcmc, ord) swapAxisParamArray(mcmc, ord, "beta")
+flipAxesIRT <- function(mcmc, mult, param = c("theta", "beta")) {
+    if(any(param == "theta")) {
+        x(mcmc) <- sweep(x(mcmc), c(1, 3), mult, "*")
+    }
+    if(any(param == "beta")) {
+        b(mcmc) <- sweep(b(mcmc), c(1, 3), mult, "*")
+    }
+    return(mcmc)
+}
+
 
 ##' The dimensions of an item response theory mcmc
 ##'

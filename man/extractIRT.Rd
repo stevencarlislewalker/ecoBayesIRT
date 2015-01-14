@@ -4,15 +4,12 @@
 \alias{a<-}
 \alias{b}
 \alias{b<-}
-\alias{bSwap}
 \alias{extractIRT}
 \alias{getAxisParamArray}
 \alias{replaceIRT}
 \alias{setAxisParamArray}
-\alias{swapAxisParamArray}
 \alias{x}
 \alias{x<-}
-\alias{xSwap}
 \title{Extract and replace pieces of an item response theory mcmc}
 \usage{
 extractIRT(mcmc, condition, index)
@@ -34,12 +31,6 @@ x(mcmc) <- value
 getAxisParamArray(mcmc, index, param = c("beta", "theta"))
 
 setAxisParamArray(mcmc, index, param = c("beta", "theta"), value)
-
-swapAxisParamArray(mcmc, ord, param = c("beta", "theta"))
-
-xSwap(mcmc, ord)
-
-bSwap(mcmc, ord)
 }
 \arguments{
 \item{mcmc}{An \code{\link{mcmc}} object from a fitted IRT model.}
@@ -54,9 +45,6 @@ columns (parameters) in \code{mcmc}.}
 
 \item{param}{Which parameter to obtain/replace (\code{theta},
 \code{beta}, or \code{alpha}).}
-
-\item{ord}{\code{itersIRT(mcmc)} by \code{axesIRT(mcmc)} matrix
-with the orderings of the axes.}
 }
 \value{
 Another \code{\link{mcmc}} object with (1) only the
