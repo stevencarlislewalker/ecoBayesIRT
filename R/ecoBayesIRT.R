@@ -911,3 +911,14 @@ plot2dCors <- function(xIndirect, xDirect, .seed = 1,
     do.call(plot, nullContArgs)
     invisible()
 }
+
+##' Orthogonal procrustean rotation matrix
+##' 
+##' @param X input matrix
+##' @param Z target matrix
+##' @return the rotation matrix
+##' @export
+orthProcrustesRotMat <- function(X, Z) {
+    sol <- svd(crossprod(Z, X))
+    return(sol$v %*% t(sol$u))
+}
