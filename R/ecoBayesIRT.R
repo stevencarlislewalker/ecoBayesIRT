@@ -925,10 +925,46 @@ orthProcrustesRotMat <- function(X, Z) {
 
 ##' Simulate from posterior distribution of indirect gradients
 ##'
-##' @param n number of replicates.
 ##' @param mcmc an \code{mcmc} object from an IRT.
+##' @param plot should a biplot be plotted?
+##' @param ... additional arguments to \code{\link{biplot}}.
 ##' @export
-rgrad <- function(n, mcmc) {
-    x(mcmc)[sample(1:itersIRT(mcmc), n), , ]
+rgrad <- function(mcmc, plot = FALSE, ...) {
+    i <- sample(1:itersIRT(mcmc), 1)
+    si <- dimnames(xx <- x(mcmc))[[2]]
+    sp <- dimnames(bb <- b(mcmc))[[2]]
+    xx <- xx[i, ,]
+    bb <- bb[i, ,]
+    dim(xx) <- c(sitesIRT(mcmc), axesIRT(mcmc))
+    dim(bb) <- c(speciesIRT(mcmc), axesIRT(mcmc))
+    rownames(xx) <- si
+    rownames(bb) <- sp
+    colnames(xx) <- colnames(bb) <- paste("Axis", 1:axesIRT(mcmc))
+    ans <- list(x = xx, b = bb)
+    if(plot) {
+        if(axesIRT(mcmc) != 2L) {
+            warning("two axis model required for biplot ... still returning posterior sample")
+            return(ans)
+        }
+        do.call(biplot, c(setNames(ans, c("x", "y")), list(...)))
+        return(invisible(ans))
+    } else {
+        return(ans)
+    }
 }
 
+##' Drop redundant parameters
+##'
+##' @inheritParams extractIRT
+##' @export
+redundantPara <- function(mcmc) {
+    ## FIXME: do we need to be careful about which axes to choose?
+    ## probably eh?
+    with(BOindex(mcmc), which(type == "theta"))[1:choose(axesIRT(mcmc), 2)]
+}
+##' @rdname redundantPara
+##' @export
+dropRedundantPara <- function(mcmc) {
+    ans <- mcmc[ , -redundantPara(mcmc)]
+    setIndex(ans)
+}

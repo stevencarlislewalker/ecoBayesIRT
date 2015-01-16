@@ -3,12 +3,14 @@
 \alias{rgrad}
 \title{Simulate from posterior distribution of indirect gradients}
 \usage{
-rgrad(n, mcmc)
+rgrad(mcmc, plot = FALSE, ...)
 }
 \arguments{
-\item{n}{number of replicates.}
-
 \item{mcmc}{an \code{mcmc} object from an IRT.}
+
+\item{plot}{should a biplot be plotted?}
+
+\item{...}{additional arguments to \code{\link{biplot}}.}
 }
 \description{
 Simulate from posterior distribution of indirect gradients
