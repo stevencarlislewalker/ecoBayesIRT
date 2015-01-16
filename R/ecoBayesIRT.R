@@ -132,6 +132,14 @@ x <- function(mcmc, index) {
 }
 ##' @rdname extractIRT
 ##' @export
+abx <- function(mcmc, index) {
+    if(missing(index)) index <- BOindex(mcmc)
+    list(a = a(mcmc, index),
+         b = b(mcmc, index),
+         x = x(mcmc, index))
+}
+##' @rdname extractIRT
+##' @export
 `a<-` <- function(mcmc, value) {
     index <- BOindex(mcmc)
     mcmc[, with(index, type == "alpha")] <- value
@@ -430,6 +438,17 @@ setIndex.mcmc.list <- function(mcmc) {
     }
     structure(mcmc, class = "mcmc.list")
 }
+##' @rdname BOindex
+##' @export
+getIndex <- function(mcmc) UseMethod("getIndex")
+##' @rdname BOindex
+##' @export
+getIndex.mcmc <- function(mcmc) attr(mcmc, "index")
+##' @rdname BOindex
+##' @export
+getIndex.mcmc.list <- function(mcmc) attr(mcmc[[1]], "index")
+
+
 
 ##' Get parameters from a Bayesian ordination (getBO)
 ##' 
@@ -968,3 +987,4 @@ dropRedundantPara <- function(mcmc) {
     ans <- mcmc[ , -redundantPara(mcmc)]
     setIndex(ans)
 }
+

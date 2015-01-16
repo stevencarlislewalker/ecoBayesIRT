@@ -2,6 +2,7 @@
 \name{extractIRT}
 \alias{a}
 \alias{a<-}
+\alias{abx}
 \alias{b}
 \alias{b<-}
 \alias{extractIRT}
@@ -21,6 +22,8 @@ a(mcmc, index)
 b(mcmc, index)
 
 x(mcmc, index)
+
+abx(mcmc, index)
 
 a(mcmc) <- value
 
