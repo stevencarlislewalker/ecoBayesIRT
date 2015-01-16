@@ -922,3 +922,13 @@ orthProcrustesRotMat <- function(X, Z) {
     sol <- svd(crossprod(Z, X))
     return(sol$v %*% t(sol$u))
 }
+
+##' Simulate from posterior distribution of indirect gradients
+##'
+##' @param n number of replicates.
+##' @param mcmc an \code{mcmc} object from an IRT.
+##' @export
+rgrad <- function(n, mcmc) {
+    x(mcmc)[sample(1:itersIRT(mcmc), n), , ]
+}
+
