@@ -4,10 +4,10 @@
 \title{Plot correlations between 2d indirect and 1d direct gradients}
 \usage{
 plot2dCors(xIndirect, xDirect, .seed = 1, plotArgs = list(las = 1, xlim =
-  c(-1, 1), ylim = c(-1, 1), xlab = "", ylab = ""), nullPtArgs = list(col =
-  rgb(1, 0, 0, 0.1)), xPtArgs = list(col = rgb(0, 0, 1, 0.1)),
-  nullContArgs = list(lwd = 3, cont = 95), xContArgs = list(lwd = 3, cont =
-  95))
+  c(-1, 1), ylim = c(-1, 1), xlab = "", ylab = ""), nullPtArgs = list(pch =
+  16, cex = 0.2, col = rgb(1, 0, 0, 0.2)), xPtArgs = list(pch = 16, cex = 0.2,
+  col = rgb(0, 0, 1, 0.02)), nullContArgs = list(lwd = 3, col = "red", cont =
+  95), xContArgs = list(lwd = 3, col = "blue", cont = 95))
 }
 \arguments{
 \item{xIndirect}{posterior distribution of indirect gradient
