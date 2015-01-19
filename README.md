@@ -1,9 +1,10 @@
 ecoBayesIRT
 ===========
 
-Utility functions for ecologists working with MCMCpack for item
-response theory modelling.  This is a companion package for a
-manuscript that is currently in the peer review process.
+Utility functions for ecologists working with
+[MCMCpack](http://mcmcpack.berkeley.edu/) for item response theory
+modelling.  This is a companion package for a manuscript that is
+currently in the peer review process.
 
 Installation
 ------------
