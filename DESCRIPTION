@@ -1,5 +1,5 @@
 Package: ecoBayesIRT
-Version: 0.0
+Version: 0.0-1
 Date: 2014-10-15
 Title: Helper functions for ecological Bayesian item response theory in R using
     MCMCpack
