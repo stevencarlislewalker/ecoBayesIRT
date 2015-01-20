@@ -35,7 +35,7 @@
 ##'
 ##' @docType package
 ##' @name ecoBayesIRT
-##' @import MCMCpack abind coda logspline plyr
+##' @import MCMCpack abind coda logspline plyr ks
 ##'
 ##' @examples
 ##' ## simulate data
